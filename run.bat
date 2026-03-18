@@ -1,2 +1,2 @@
 @echo off
-pythonw librarian_engine.py
+pythonw "C:\DigitalLibrarian\librarian_engine.py"

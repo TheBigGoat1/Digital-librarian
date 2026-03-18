@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.librarian.lock
+.cleanup_done
+librarian_manifest.jsonl
+librarian_audit.log
