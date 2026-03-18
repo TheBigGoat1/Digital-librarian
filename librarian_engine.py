@@ -40,7 +40,8 @@ logging.basicConfig(
 class LibrarianHandler(FileSystemEventHandler):
     def __init__(self):
         super().__init__()
-        self._recent_archives = deque(maxlen=20)  # (timestamp, archive_stem)
+        # Items: (archive_moved_time, archive_stem, extracted_bundle_path)
+        self._recent_archives = deque(maxlen=20)
         self._hash_cache = {}  # (path, size, mtime_ns) -> md5
 
     def _now_stamp(self) -> str:
@@ -228,11 +229,11 @@ class LibrarianHandler(FileSystemEventHandler):
         # bundle them into a single folder instead of scattering across categories.
         if self._recent_archives:
             now = time.time()
-            recent_ts, recent_stem = self._recent_archives[-1]
+            recent_ts, recent_stem, recent_bundle = self._recent_archives[-1]
             if now - recent_ts <= 120:
-                stamp = self._now_stamp()
-                bundle = BASE_DIR / f"{EXTRACTED_PREFIX}{recent_stem}_{stamp}"
-                bundle.mkdir(exist_ok=True)
+                # Use one bundle folder per archive to avoid "replication-looking" folder spam.
+                bundle = recent_bundle
+                bundle.mkdir(exist_ok=True, parents=True)
                 try:
                     dest = self._unique_destination(bundle / file_path.name)
                     shutil.move(str(file_path), str(dest))
@@ -284,7 +285,10 @@ class LibrarianHandler(FileSystemEventHandler):
 
             if target_folder.name == "Archives":
                 # Remember most recent archive so loose extractions can be bundled.
-                self._recent_archives.append((time.time(), Path(file_path.name).stem))
+                archive_stamp = self._now_stamp()
+                archive_stem = Path(file_path.name).stem
+                extracted_bundle = BASE_DIR / f"{EXTRACTED_PREFIX}{archive_stem}_{archive_stamp}"
+                self._recent_archives.append((time.time(), archive_stem, extracted_bundle))
         except Exception as e:
             logging.error(f"SYSTEM ERROR: {e}")
 
